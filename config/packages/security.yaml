@@ -1,0 +1,39 @@
+security:
+
+  providers:
+    app_user_provider:
+      entity:
+        class: App\Entity\User
+        property: username
+
+  firewalls:
+    login:
+      pattern:  ^/login
+      stateless: true
+      anonymous: true
+      json_login:
+        check_path:               /login_check
+        success_handler:          lexik_jwt_authentication.handler.authentication_success
+        failure_handler:          lexik_jwt_authentication.handler.authentication_failure
+    special_api:
+      pattern:  ^/volume/\d+/secret$
+      anonymous: lazy
+      logout: ~
+      guard:
+        authenticators:
+          - App\Security\TokenAuthenticator
+      provider: app_user_provider
+    api:
+      pattern:   ^/
+      stateless: true
+      guard:
+        authenticators:
+          - lexik_jwt_authentication.jwt_token_authenticator
+
+  encoders:
+    App\Entity\User:
+      algorithm: auto
+
+  access_control:
+    - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+    - { path: ^/, roles: IS_AUTHENTICATED_FULLY }

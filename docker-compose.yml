@@ -1,0 +1,52 @@
+version: "3.1"
+
+networks:
+  keyfilekeeper_api:
+  keyfilekeeper_db:
+
+services:
+  keyfilekeeper_db:
+    image: mariadb:10.4
+    container_name: keyfilekeeper_db
+    volumes:
+      - ./docker/persistent/db:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: docker_root
+      MYSQL_DATABASE: keyfilekeeper
+      MYSQL_USER: keyfilekeeper_user
+      MYSQL_PASSWORD: keyfilekeeper_pw
+    networks:
+      - keyfilekeeper_db
+    ports:
+      - "3306:3306"
+
+  keyfilekeeper_nginx:
+    image: nginx:alpine
+    container_name: keyfilekeeper_nginx
+    working_dir: /application
+    volumes:
+      - .:/application
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "8000:80"
+    expose:
+      - "80"
+    networks:
+      - keyfilekeeper_api
+
+  keyfilekeeper_fpm:
+    build: ./docker/fpm
+    container_name: keyfilekeeper_fpm
+    working_dir: /application
+    networks:
+      - keyfilekeeper_db
+      - keyfilekeeper_api
+    volumes:
+      - .:/applicationmkdir
+    environment:
+      ADMIN_INIT_PASSWORD: 12345
+      JWT_SECRET_KEY: /application/config/jwt/private.pem
+      JWT_PUBLIC_KEY: /application/config/jwt/public.pem
+      JWT_PASSPHRASE: faf1DF5cPv2Q1ON2QkANATsOXSbl3pMbHjcU
+      XDEBUG_CONFIG: "remote_host=192.168.178.99"
+      PHP_IDE_CONFIG: "serverName=keyfilekeeper_server"
