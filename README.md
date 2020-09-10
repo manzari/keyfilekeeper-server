@@ -8,3 +8,10 @@ Keyfilekeeper exposes an HTTP endpoint, which returns a disk encryption key when
 To prevent replay attacks its using two factor push authentication.
 
 You can have full disk encryption but would need to manually authorize rebooting.
+
+## Develop
+```
+docker-compose up -d
+```
+- database runs at 3306
+- api runs at 8000
