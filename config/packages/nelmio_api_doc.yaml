@@ -1,0 +1,18 @@
+nelmio_api_doc:
+    documentation:
+        info:
+            title: Keyfilekeeper
+            description: Keeps keyfiles
+            version: 1.0.0
+        securityDefinitions:
+            Bearer:
+                type: apiKey
+                description: 'Set the obtained jwt token'
+                name: Authorization
+                in: header
+        security:
+            - Bearer: []
+    areas:
+        default:
+            path_patterns:
+                  - ^/api(?!/doc(\.json)?)

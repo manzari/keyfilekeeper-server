@@ -7,16 +7,20 @@ security:
         property: username
 
   firewalls:
+    doc:
+      pattern: ^/api/doc
+      lazy: true
+      anonymous: true
     login:
-      pattern:  ^/login
+      pattern:  ^/api/login_check$
       stateless: true
       anonymous: true
       json_login:
-        check_path:               /login_check
+        check_path:               /api/login_check
         success_handler:          lexik_jwt_authentication.handler.authentication_success
         failure_handler:          lexik_jwt_authentication.handler.authentication_failure
     special_api:
-      pattern:  ^/volume/\d+/secret$
+      pattern:  ^/api/volume/\d+/secret$
       anonymous: lazy
       logout: ~
       guard:
@@ -24,7 +28,7 @@ security:
           - App\Security\TokenAuthenticator
       provider: app_user_provider
     api:
-      pattern:   ^/
+      pattern:   ^/api
       stateless: true
       guard:
         authenticators:
@@ -35,5 +39,6 @@ security:
       algorithm: auto
 
   access_control:
-    - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-    - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+    - { path: ^/login_check$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+    - { path: ^/api/doc(\.json)?$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+    - { path: ^/api, roles: [IS_AUTHENTICATED_FULLY, ROLE_USER] }
