@@ -42,11 +42,11 @@ services:
       - keyfilekeeper_db
       - keyfilekeeper_api
     volumes:
-      - .:/applicationmkdir
+      - .:/application
     environment:
       ADMIN_INIT_PASSWORD: 12345
       JWT_SECRET_KEY: /application/config/jwt/private.pem
       JWT_PUBLIC_KEY: /application/config/jwt/public.pem
-      JWT_PASSPHRASE: faf1DF5cPv2Q1ON2QkANATsOXSbl3pMbHjcU
+      JWT_PASSPHRASE: faf1DF5cPv2Q1ON2QkANATsOXSbl3pMbHjcUWoBe7YcEr5ZyDREvluhWVpf3WnfR1GERk0VnCEUmmemtmys1lAk34rROL3eYalgqUrs8wffTdq4PUbTazQDR4lOQfB2r
       XDEBUG_CONFIG: "remote_host=192.168.178.99"
       PHP_IDE_CONFIG: "serverName=keyfilekeeper_server"

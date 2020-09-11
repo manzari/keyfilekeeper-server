@@ -1,4 +1,4 @@
-FROM php:fpm
+FROM php:7.4-fpm
 WORKDIR "/application"
 
 RUN apt-get update \

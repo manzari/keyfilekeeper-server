@@ -47,7 +47,7 @@ class VolumeController
     }
 
     /**
-     * @Route("/volumes", methods={"GET"})
+     * @Route("/api/volumes", methods={"GET"})
      * @param Request $request
      * @param SerializerInterface $serializer
      * @return Response
@@ -69,7 +69,7 @@ class VolumeController
     }
 
     /**
-     * @Route("/volumes", methods={"POST"})
+     * @Route("/api/volumes", methods={"POST"})
      * @param Request $request
      * @return Response
      * @throws ORMException
@@ -85,7 +85,7 @@ class VolumeController
     }
 
     /**
-     * @Route("/volume/{id}", methods={"GET"})
+     * @Route("/api/volume/{id}", methods={"GET"})
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param int $id
@@ -102,7 +102,7 @@ class VolumeController
     }
 
     /**
-     * @Route("/volume/{id}", methods={"PATCH"})
+     * @Route("/api/volume/{id}", methods={"PATCH"})
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param int $id
@@ -128,7 +128,7 @@ class VolumeController
     }
 
     /**
-     * @Route("/volume/{id}", methods={"DELETE"})
+     * @Route("/api/volume/{id}", methods={"DELETE"})
      * @param Request $request
      * @param int $id
      * @return Response
@@ -145,7 +145,7 @@ class VolumeController
     }
 
     /**
-     * @Route("/volume/{id}/secret", methods={"GET"})
+     * @Route("/api/volume/{id}/secret", methods={"GET"})
      * @param Request $request
      * @param $id
      * @return Response

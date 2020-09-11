@@ -46,12 +46,12 @@ class ApiTokenController
     }
 
     /**
-     * @Route("/user/{username}/apiTokens", methods={"POST"})
-     * @param ApiTokenRepository $apiTokenRepository
+     * @Route("/api/user/{username}/apiTokens", methods={"POST"})
      * @param UserRepository $userRepository
      * @param string $username
      * @return NoRightsResponse|NotFoundResponse|RedirectResponse
-     * @throws Exception
+     * @throws ORMException
+     * @throws OptimisticLockException
      */
     public function createApiToken(UserRepository $userRepository, string $username)
     {
@@ -68,7 +68,7 @@ class ApiTokenController
     }
 
     /**
-     * @Route("/user/{username}/apiToken/{id}", methods={"DELETE"})
+     * @Route("/api/user/{username}/apiToken/{id}", methods={"DELETE"})
      * @param string $username
      * @param int $id
      * @return EmptyResponse|NoRightsResponse|NotFoundResponse
@@ -92,7 +92,7 @@ class ApiTokenController
     }
 
     /**
-     * @Route("/user/{username}/apiTokens", methods={"GET"})
+     * @Route("/api/user/{username}/apiTokens", methods={"GET"})
      * @param SerializerInterface $serializer
      * @param string $username
      * @return JsonResponse|NoRightsResponse|NotFoundResponse

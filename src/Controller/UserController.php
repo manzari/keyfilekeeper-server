@@ -52,7 +52,7 @@ class UserController
     }
 
     /**
-     * @Route("/users", methods={"GET"})
+     * @Route("/api/users", methods={"GET"})
      * @param Request $request
      * @param SerializerInterface $serializer
      * @return Response
@@ -75,7 +75,7 @@ class UserController
     }
 
     /**
-     * @Route("/users", methods={"POST"})
+     * @Route("/api/users", methods={"POST"})
      * @param Request $request
      * @param UserPasswordEncoderInterface $userPasswordEncoder
      * @return Response
@@ -102,7 +102,7 @@ class UserController
     }
 
     /**
-     * @Route("/user/{username}", methods={"GET"})
+     * @Route("/api/user/{username}", methods={"GET"})
      * @param Request $request
      * @param SerializerInterface $serializer
      * @param string $username
@@ -124,7 +124,7 @@ class UserController
     }
 
     /**
-     * @Route("/user/{username}", methods={"POST"})
+     * @Route("/api/user/{username}", methods={"POST"})
      * @param Request $request
      * @param string $username
      * @param UserPasswordEncoderInterface $userPasswordEncoder
@@ -155,7 +155,7 @@ class UserController
     }
 
     /**
-     * @Route("/user/{username}", methods={"DELETE"})
+     * @Route("/api/user/{username}", methods={"DELETE"})
      * @param Request $request
      * @param string $username
      * @return EmptyResponse|NoRightsResponse
