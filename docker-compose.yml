@@ -50,3 +50,4 @@ services:
       JWT_PASSPHRASE: faf1DF5cPv2Q1ON2QkANATsOXSbl3pMbHjcUWoBe7YcEr5ZyDREvluhWVpf3WnfR1GERk0VnCEUmmemtmys1lAk34rROL3eYalgqUrs8wffTdq4PUbTazQDR4lOQfB2r
       XDEBUG_CONFIG: "remote_host=192.168.178.99"
       PHP_IDE_CONFIG: "serverName=keyfilekeeper_server"
+      BASE_URL: http://localhost:8000/api

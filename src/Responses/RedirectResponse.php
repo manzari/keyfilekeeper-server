@@ -8,8 +8,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RedirectResponse extends Response
 {
-    public function __construct(string $url)
+    public function __construct(string $path)
     {
-        parent::__construct(null, 303, ['Location' => $url]);
+        parent::__construct(null, 303, ['Location' => getenv('BASE_URL') . $path]);
     }
 }
