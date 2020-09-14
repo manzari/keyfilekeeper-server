@@ -3,9 +3,7 @@
 
 namespace App\Controller;
 
-use App\Entity\ApiToken;
 use App\Entity\User;
-use App\Entity\Volume;
 use App\Repository\UserRepository;
 use App\Responses\EmptyResponse;
 use App\Responses\ErrorResponse;
@@ -14,7 +12,7 @@ use App\Responses\NoRightsResponse;
 use App\Responses\NotFoundOrNoRightsResponse;
 use App\Responses\NotFoundResponse;
 use App\Responses\RedirectResponse;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
+use App\Util\PasswordGenerator;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
 use Exception;
@@ -24,9 +22,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
-use Symfony\Component\Serializer\Serializer;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Validator\Constraints\Json;
 
 class UserController
 {
@@ -78,26 +74,40 @@ class UserController
      * @Route("/api/users", methods={"POST"})
      * @param Request $request
      * @param UserPasswordEncoderInterface $userPasswordEncoder
+     * @param PasswordGenerator $passwordGenerator
      * @return Response
      * @throws ORMException
      * @throws OptimisticLockException
      */
-    public function addUser(Request $request, UserPasswordEncoderInterface $userPasswordEncoder)
+    public function addUser(Request $request, UserPasswordEncoderInterface $userPasswordEncoder, PasswordGenerator $passwordGenerator)
     {
         if (!in_array('ROLE_ADMIN', $this->security->getUser()->getRoles())) {
             return new NoRightsResponse('add users');
         }
         $body = json_decode($request->getContent(), true);
-        $user = new User($body['username']);
-        foreach ($body['roles'] as $role) {
-            $user->addRole($role);
+        if (isset($body['username'])) {
+            $username = $body['username'];
+            if ($this->userRepository->findOneBy(['username' => $body['username']]) !== null) {
+                return new ErrorResponse('Username already taken!', Response::HTTP_BAD_REQUEST);
+            }
+        } else {
+            $taken = true;
+            while ($taken) {
+                $username = 'User_' . $passwordGenerator->generate(5);
+                $taken = ($this->userRepository->findOneBy(['username' => $username]) !== null);
+            }
         }
-        $user->setPassword($userPasswordEncoder->encodePassword($user, $body['password']));
-        try {
-            $this->userRepository->save($user);
-        } catch (UniqueConstraintViolationException $e) {
-            return new ErrorResponse('Username already taken!', Response::HTTP_BAD_REQUEST);
+        $user = new User($username);
+        if (isset($body['roles'])) {
+            foreach ($body['roles'] as $role) {
+                $user->addRole($role);
+            }
         }
+        $password = isset($body['password'])
+            ? $body['password']
+            : $passwordGenerator->generate();
+        $user->setPassword($userPasswordEncoder->encodePassword($user, $password));
+        $this->userRepository->save($user);
         return new RedirectResponse('/user/' . $user->getUsername());
     }
 
@@ -110,6 +120,7 @@ class UserController
      */
     public function getUser(Request $request, SerializerInterface $serializer, string $username)
     {
+        /** @var User $currentUser */
         $currentUser = $this->security->getUser();
         if (in_array('ROLE_ADMIN', $currentUser->getRoles())) {
             $user = $this->userRepository->findOneBy(['username' => $username]);
@@ -124,34 +135,36 @@ class UserController
     }
 
     /**
-     * @Route("/api/user/{username}", methods={"POST"})
+     * @Route("/api/user/{username}", methods={"PATCH"})
      * @param Request $request
      * @param string $username
      * @param UserPasswordEncoderInterface $userPasswordEncoder
-     * @return NoRightsResponse|NotFoundResponse|RedirectResponse
+     * @return NoRightsResponse|NotFoundResponse|RedirectResponse|ErrorResponse
      * @throws ORMException
      * @throws OptimisticLockException
      */
     public function changeUser(Request $request, string $username, UserPasswordEncoderInterface $userPasswordEncoder)
     {
+        /** @var User $currentUser */
         $currentUser = $this->security->getUser();
-        if (!($currentUser->getUsername() === $username)
-            && !in_array('ROLE_ADMIN', $this->security->getUser()->getRoles())) {
+        if ($currentUser->getUsername() !== $username && !$currentUser->hasRole("ROLE_ADMIN")) {
             return new NoRightsResponse('change this user');
         }
-        $body = json_decode($request->getContent(), true);
         $user = $this->userRepository->findOneBy(['username' => $username]);
         if ($user === null) {
             return new NotFoundResponse('user');
         }
-        if (isset($body['roles']) && is_array($body['roles'])) {
-            $user->setRoles($body['roles']);
-        }
         if (isset($body['password'])) {
             $user->setPassword($userPasswordEncoder->encodePassword($user, $body['password']));
         }
+        $body = json_decode($request->getContent(), true);
+        if ($currentUser->getUsername() !== $username && $currentUser->hasRole("ROLE_ADMIN")) {
+            if (isset($body['roles']) && is_array($body['roles'])) {
+                $user->setRoles($body['roles']);
+            }
+        }
         $this->userRepository->save($user);
-        return new RedirectResponse('/user/' . $username);
+        return new RedirectResponse('/user/' . $user->getUsername());
     }
 
     /**
@@ -164,7 +177,9 @@ class UserController
      */
     public function deleteUser(Request $request, string $username)
     {
-        if (!($this->security->getUser()->getUsername() === $username)
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if (!($currentUser->getUsername() === $username)
             && !in_array('ROLE_ADMIN', $this->security->getUser()->getRoles())) {
             return new NoRightsResponse('delete this user');
         }
@@ -184,18 +199,18 @@ class UserController
             switch ($attribute) {
                 case 'volumes':
                     $collection = $object->getVolumes();
-                    $baselink = '/volume/';
+                    $baseLink = '/volume/';
                     break;
                 case 'apiTokens':
                     $collection = $object->getApiTokens();
-                    $baselink = '/user/' . $object->getUsername() . '/apiToken/';
+                    $baseLink = '/user/' . $object->getUsername() . '/apiToken/';
                     break;
                 default:
                     throw new Exception("unexpected");
             }
             $links = [];
             foreach ($collection as $item) {
-                $links[] = $baselink . $item->getId();
+                $links[] = $baseLink . $item->getId();
             }
             return $links;
         };

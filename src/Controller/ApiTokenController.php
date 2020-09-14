@@ -11,12 +11,10 @@ use App\Repository\UserRepository;
 use App\Responses\EmptyResponse;
 use App\Responses\JsonResponse;
 use App\Responses\NoRightsResponse;
-use App\Responses\NotFoundOrNoRightsResponse;
 use App\Responses\NotFoundResponse;
 use App\Responses\RedirectResponse;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
-use Exception;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
@@ -46,93 +44,124 @@ class ApiTokenController
     }
 
     /**
-     * @Route("/api/user/{username}/apiTokens", methods={"POST"})
+     * @Route("/api/user/{username}/tokens", methods={"POST"})
      * @param UserRepository $userRepository
      * @param string $username
      * @return NoRightsResponse|NotFoundResponse|RedirectResponse
      * @throws ORMException
      * @throws OptimisticLockException
      */
-    public function createApiToken(UserRepository $userRepository, string $username)
+    public function createToken(UserRepository $userRepository, string $username)
     {
-        if (!$this->isAllowed($username)) {
-            return new NoRightsResponse('add this apiToken');
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if ($currentUser->getId() !== $username && !$currentUser->hasRole('ROLE_ADMIN')) {
+            return new NoRightsResponse('add this token');
         }
-        $user = $userRepository->findOneBy(['username' => $username]);
+        $user = $userRepository->findOneBy(['id' => $username]);
         if ($user === null) {
             return new NotFoundResponse('user');
         }
         $token = new ApiToken($user);
         $token = $this->apiTokenRepository->save($token);
-        return new RedirectResponse('/user/' . $username . '/apiToken/' . $token->getId());
+        return new RedirectResponse('/user/' . $username . '/token/' . $token->getId());
     }
 
     /**
-     * @Route("/api/user/{username}/apiToken/{id}", methods={"DELETE"})
+     * @Route("/api/user/{username}/token/{id}", methods={"DELETE"})
      * @param string $username
      * @param int $id
      * @return EmptyResponse|NoRightsResponse|NotFoundResponse
      * @throws ORMException
      * @throws OptimisticLockException
      */
-    public function deleteApiToken(string $username, int $id)
+    public function deleteToken(string $username, int $id)
     {
-        if (!$this->isAllowed($username)) {
-            return new NoRightsResponse('delete this apiToken');
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if ($currentUser->getId() !== $username && !$currentUser->hasRole('ROLE_ADMIN')) {
+            return new NoRightsResponse('delete this token');
         }
         $token = $token = $this->apiTokenRepository->findOneBy(['id' => $id]);
         if ($token === null) {
-            return new NotFoundResponse('apiToken');
+            return new NotFoundResponse('token');
         }
-        if (!$token->getUser()->getUsername() === $username) {
-            return new NoRightsResponse('delete this users apiToken');
+        if (!$token->getUser()->getId() === $username) {
+            return new NoRightsResponse('delete this users token');
         }
         $this->apiTokenRepository->delete($token);
         return new EmptyResponse();
     }
 
     /**
-     * @Route("/api/user/{username}/apiTokens", methods={"GET"})
+     * @Route("/api/user/{username}/tokens", methods={"GET"})
      * @param SerializerInterface $serializer
      * @param string $username
      * @return JsonResponse|NoRightsResponse|NotFoundResponse
      */
-    public function getApiTokens(SerializerInterface $serializer, string $username)
+    public function getUsersTokens(SerializerInterface $serializer,UserRepository $userRepository, string $username)
     {
-        if (!$this->isAllowed($username)) {
-            return new NoRightsResponse('read this apiTokens');
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        $user = $userRepository->findOneBy(['username'=>$username]);
+        if ($user === null) {
+            return new NotFoundResponse('user');
         }
-        $tokens = $this->apiTokenRepository->findBy(['id' => $username]);
-        return new JsonResponse($this->serializeApiTokens($serializer, $tokens));
+        if ($currentUser->getId() !== $username && !$currentUser->hasRole('ROLE_ADMIN')) {
+            return new NoRightsResponse('see this users tokens');
+        }
+        $tokens = $this->apiTokenRepository->findBy(['user_id' => $user->getId()]);
+        return new JsonResponse($this->serializeTokens($serializer, $tokens));
     }
 
-
-    private function getTokenIfAllowed($username, $id): ?ApiToken
+    /**
+     * @Route("/api/tokens", methods={"GET"})
+     * @param SerializerInterface $serializer
+     * @return JsonResponse|NoRightsResponse|NotFoundResponse
+     */
+    public function getTokens(SerializerInterface $serializer)
     {
-        $token = $this->apiTokenRepository->findOneBy(['id' => $id]);
-        if ($token !== null &&
-            ($token->getUser()->getUsername() === $username
-                || in_array('ROLE_ADMIN', $this->security->getUser()->getRoles()))) {
-            return $token;
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if (!$currentUser->hasRole('ROLE_ADMIN')) {
+            return new NoRightsResponse('see this tokens');
         }
-        return null;
+        $tokens = $this->apiTokenRepository->findAll();
+        return new JsonResponse($this->serializeTokens($serializer, $tokens));
     }
 
-    private function isAllowed(string $username): bool
+    /**
+     * @Route("/api/user/{username}/token/{id}/token", methods={"GET"})
+     * @param string $username
+     * @param string $id
+     * @return JsonResponse|NoRightsResponse
+     */
+    public function getToken(string $username, string $id)
     {
-        return ($this->security->getUser()->getUsername() === $username
-            || in_array('ROLE_ADMIN', $this->security->getUser()->getRoles()));
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if ($currentUser->getId() === $username) {
+            return new NoRightsResponse('see this tokens');
+        }
+        $token = $token = $this->apiTokenRepository->findOneBy(['id' => $id]);
+        if ($token === null) {
+            return new NotFoundResponse('token');
+        }
+        if (!$token->getUser()->getId() === $username) {
+            return new NoRightsResponse('see this users token');
+        }
+        return new JsonResponse(['token' => $token->getToken()], 200, true);
     }
 
     /**
      * @param SerializerInterface $serializer
-     * @param $tokens
+     * @param ApiToken[] $tokens
      * @return string
      */
-    private function serializeApiTokens(SerializerInterface $serializer, $tokens)
+    private function serializeTokens(SerializerInterface $serializer, array $tokens)
     {
         $callback = function ($attributeValue, $object, $attribute, $format, $context) {
-            return '/user/'.$object->getUser()->getUsername();
+            return '/user/' . $object->getUser()->getUsername();
         };
         $context = [
             AbstractNormalizer::CALLBACKS =>
