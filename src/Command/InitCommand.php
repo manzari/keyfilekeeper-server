@@ -44,8 +44,8 @@ class InitCommand extends Command
     {
         $admin = $this->userRepository->findOneBy(['username' => 'admin']);
         if ($admin !== null) {
-            $output->writeln('Admin user existing, init already happened!');
-            return Command::FAILURE;
+            $output->writeln('Admin user existing, skipping');
+            return Command::SUCCESS;
         }
         $password = getenv('ADMIN_INIT_PASSWORD');
         if ($password === false) {
