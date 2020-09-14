@@ -50,7 +50,8 @@ class ApiToken
     {
         $this->token = sha1(random_bytes(42));
         $this->dateCreated = new DateTime('now');
-        $this->dateExpired = $this->dateCreated + new DateInterval('P1Y');
+        $this->dateExpired = clone $this->dateCreated;
+        $this->dateCreated->add( new DateInterval('P1Y'));
         $this->user = $user;
     }
 

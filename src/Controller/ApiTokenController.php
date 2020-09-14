@@ -33,14 +33,21 @@ class ApiTokenController
     private $apiTokenRepository;
 
     /**
-     * UserController constructor.
+     * @var SerializerInterface
+     */
+    private $serializer;
+
+    /**
+     * ApiTokenController constructor.
      * @param Security $security
      * @param ApiTokenRepository $apiTokenRepository
+     * @param SerializerInterface $serializer
      */
-    public function __construct(Security $security, ApiTokenRepository $apiTokenRepository)
+    public function __construct(Security $security, ApiTokenRepository $apiTokenRepository, SerializerInterface $serializer)
     {
         $this->security = $security;
         $this->apiTokenRepository = $apiTokenRepository;
+        $this->serializer = $serializer;
     }
 
     /**
@@ -58,7 +65,7 @@ class ApiTokenController
         if ($currentUser->getId() !== $username && !$currentUser->hasRole('ROLE_ADMIN')) {
             return new NoRightsResponse('add this token');
         }
-        $user = $userRepository->findOneBy(['id' => $username]);
+        $user = $userRepository->findOneBy(['username' => $username]);
         if ($user === null) {
             return new NotFoundResponse('user');
         }
@@ -95,15 +102,15 @@ class ApiTokenController
 
     /**
      * @Route("/api/user/{username}/tokens", methods={"GET"})
-     * @param SerializerInterface $serializer
+     * @param UserRepository $userRepository
      * @param string $username
      * @return JsonResponse|NoRightsResponse|NotFoundResponse
      */
-    public function getUsersTokens(SerializerInterface $serializer,UserRepository $userRepository, string $username)
+    public function getUsersTokens(UserRepository $userRepository, string $username)
     {
         /** @var User $currentUser */
         $currentUser = $this->security->getUser();
-        $user = $userRepository->findOneBy(['username'=>$username]);
+        $user = $userRepository->findOneBy(['username' => $username]);
         if ($user === null) {
             return new NotFoundResponse('user');
         }
@@ -111,15 +118,14 @@ class ApiTokenController
             return new NoRightsResponse('see this users tokens');
         }
         $tokens = $this->apiTokenRepository->findBy(['user_id' => $user->getId()]);
-        return new JsonResponse($this->serializeTokens($serializer, $tokens));
+        return new JsonResponse($this->serializeTokens($tokens));
     }
 
     /**
      * @Route("/api/tokens", methods={"GET"})
-     * @param SerializerInterface $serializer
      * @return JsonResponse|NoRightsResponse|NotFoundResponse
      */
-    public function getTokens(SerializerInterface $serializer)
+    public function getTokens()
     {
         /** @var User $currentUser */
         $currentUser = $this->security->getUser();
@@ -127,11 +133,11 @@ class ApiTokenController
             return new NoRightsResponse('see this tokens');
         }
         $tokens = $this->apiTokenRepository->findAll();
-        return new JsonResponse($this->serializeTokens($serializer, $tokens));
+        return new JsonResponse($this->serializeTokens($tokens));
     }
 
     /**
-     * @Route("/api/user/{username}/token/{id}/token", methods={"GET"})
+     * @Route("/api/user/{username}/token/{id}", methods={"GET"})
      * @param string $username
      * @param string $id
      * @return JsonResponse|NoRightsResponse
@@ -143,6 +149,7 @@ class ApiTokenController
         if ($currentUser->getId() === $username) {
             return new NoRightsResponse('see this tokens');
         }
+
         $token = $token = $this->apiTokenRepository->findOneBy(['id' => $id]);
         if ($token === null) {
             return new NotFoundResponse('token');
@@ -150,17 +157,17 @@ class ApiTokenController
         if (!$token->getUser()->getId() === $username) {
             return new NoRightsResponse('see this users token');
         }
-        return new JsonResponse(['token' => $token->getToken()], 200, true);
+        return new JsonResponse($this->serializeTokens($token));
     }
 
     /**
-     * @param SerializerInterface $serializer
-     * @param ApiToken[] $tokens
+     * @param ApiToken|ApiToken[] $tokens
      * @return string
      */
-    private function serializeTokens(SerializerInterface $serializer, array $tokens)
+    private
+    function serializeTokens($tokens)
     {
-        $callback = function ($attributeValue, $object, $attribute, $format, $context) {
+        $callback = function ($attributeValue, $object) {
             return '/user/' . $object->getUser()->getUsername();
         };
         $context = [
@@ -170,6 +177,6 @@ class ApiTokenController
                 ],
             AbstractNormalizer::IGNORED_ATTRIBUTES => ['token']
         ];
-        return $serializer->serialize($tokens, 'json', $context);
+        return $this->serializer->serialize($tokens, 'json', $context);
     }
 }
