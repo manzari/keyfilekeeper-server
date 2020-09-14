@@ -102,12 +102,33 @@ class User implements UserInterface
      * @param string $role
      * @return $this
      */
-    public function addRole(string $role): self {
-        if (str_starts_with($role,'ROLE_')) {
+    public function addRole(string $role): self
+    {
+        if (str_starts_with($role, 'ROLE_')) {
             $this->roles[] = $role;
         }
 
         return $this;
+    }
+
+    /**
+     * @param string $role
+     * @return $this
+     */
+    public function removeRole(string $role): self
+    {
+        $this->roles = array_diff($this->roles, [$role]);
+
+        return $this;
+    }
+
+    /**
+     * @param string $role
+     * @return bool
+     */
+    public function hasRole(string $role): bool
+    {
+        return in_array($role, $this->roles);
     }
 
     /**
