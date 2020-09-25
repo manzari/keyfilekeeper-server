@@ -16,7 +16,7 @@ RUN docker-php-ext-configure pdo_mysql  \
 RUN pecl install xdebug \
     && docker-php-ext-enable xdebug
 
-COPY php-ini-overrides.ini /etc/php/7.4/fpm/conf.d/99-overrides.ini
+COPY php-ini-overrides.ini "$PHP_INI_DIR/conf.d/99-overrides.ini"
 
 RUN wget https://get.symfony.com/cli/installer -O - | bash \
     && mv /root/.symfony/bin/symfony /usr/local/bin/symfony
