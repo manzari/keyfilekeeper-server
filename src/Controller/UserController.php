@@ -108,24 +108,24 @@ class UserController
             : $passwordGenerator->generate();
         $user->setPassword($userPasswordEncoder->encodePassword($user, $password));
         $this->userRepository->save($user);
-        return new RedirectResponse('/user/' . $user->getUsername());
+        return new RedirectResponse('/user/' . $user->getId());
     }
 
     /**
-     * @Route("/api/user/{username}", methods={"GET"})
+     * @Route("/api/user/{id}", methods={"GET"})
      * @param Request $request
      * @param SerializerInterface $serializer
-     * @param string $username
+     * @param string $id
      * @return Response
      */
-    public function getUser(Request $request, SerializerInterface $serializer, string $username)
+    public function getUser(Request $request, SerializerInterface $serializer, string $id)
     {
         /** @var User $currentUser */
         $currentUser = $this->security->getUser();
         if (in_array('ROLE_ADMIN', $currentUser->getRoles())) {
-            $user = $this->userRepository->findOneBy(['username' => $username]);
+            $user = $this->userRepository->findOneBy(['id' => $id]);
         } else {
-            $user = $currentUser->getUsername() === $username ? $currentUser : null;
+            $user = $currentUser->getId() === $id ? $currentUser : null;
         }
         if ($user) {
             $json = $this->serializeUsers($serializer, $user);
@@ -135,22 +135,22 @@ class UserController
     }
 
     /**
-     * @Route("/api/user/{username}", methods={"PATCH"})
+     * @Route("/api/user/{id}", methods={"PATCH"})
      * @param Request $request
-     * @param string $username
+     * @param string $id
      * @param UserPasswordEncoderInterface $userPasswordEncoder
      * @return NoRightsResponse|NotFoundResponse|RedirectResponse|ErrorResponse
      * @throws ORMException
      * @throws OptimisticLockException
      */
-    public function changeUser(Request $request, string $username, UserPasswordEncoderInterface $userPasswordEncoder)
+    public function changeUser(Request $request, string $id, UserPasswordEncoderInterface $userPasswordEncoder)
     {
         /** @var User $currentUser */
         $currentUser = $this->security->getUser();
-        if ($currentUser->getUsername() !== $username && !$currentUser->hasRole("ROLE_ADMIN")) {
+        if ($currentUser->getId() !== $id && !$currentUser->hasRole("ROLE_ADMIN")) {
             return new NoRightsResponse('change this user');
         }
-        $user = $this->userRepository->findOneBy(['username' => $username]);
+        $user = $this->userRepository->findOneBy(['id' => $id]);
         if ($user === null) {
             return new NotFoundResponse('user');
         }
@@ -158,32 +158,32 @@ class UserController
             $user->setPassword($userPasswordEncoder->encodePassword($user, $body['password']));
         }
         $body = json_decode($request->getContent(), true);
-        if ($currentUser->getUsername() !== $username && $currentUser->hasRole("ROLE_ADMIN")) {
+        if ($currentUser->getId() !== $id && $currentUser->hasRole("ROLE_ADMIN")) {
             if (isset($body['roles']) && is_array($body['roles'])) {
                 $user->setRoles($body['roles']);
             }
         }
         $this->userRepository->save($user);
-        return new RedirectResponse('/user/' . $user->getUsername());
+        return new RedirectResponse('/user/' . $user->getId());
     }
 
     /**
-     * @Route("/api/user/{username}", methods={"DELETE"})
+     * @Route("/api/user/{id}", methods={"DELETE"})
      * @param Request $request
-     * @param string $username
+     * @param string $id
      * @return EmptyResponse|NoRightsResponse
      * @throws ORMException
      * @throws OptimisticLockException
      */
-    public function deleteUser(Request $request, string $username)
+    public function deleteUser(Request $request, string $id)
     {
         /** @var User $currentUser */
         $currentUser = $this->security->getUser();
-        if (!($currentUser->getUsername() === $username)
+        if (!($currentUser->getId() === $id)
             && !in_array('ROLE_ADMIN', $this->security->getUser()->getRoles())) {
             return new NoRightsResponse('delete this user');
         }
-        $user = $this->userRepository->findOneBy(['username' => $username]);
+        $user = $this->userRepository->findOneBy(['id' => $id]);
         $this->userRepository->delete($user);
         return new EmptyResponse();
     }
@@ -203,7 +203,7 @@ class UserController
                     break;
                 case 'apiTokens':
                     $collection = $object->getApiTokens();
-                    $baseLink = '/user/' . $object->getUsername() . '/apiToken/';
+                    $baseLink = '/user/' . $object->getId() . '/apiToken/';
                     break;
                 default:
                     throw new Exception("unexpected");
