@@ -161,6 +161,25 @@ class ApiTokenController
     }
 
     /**
+     * @Route("/api/token/{id}/secret", methods={"GET"})
+     * @param string $id
+     * @return JsonResponse|NoRightsResponse
+     */
+    public function getTokenSecret(string $id)
+    {
+        $token = $this->apiTokenRepository->findOneBy(['id' => $id]);
+        if ($token === null) {
+            return new NotFoundResponse('token');
+        }
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if (!$token->getUser()->getId() === $currentUser->getId()) {
+            return new NoRightsResponse('see this users token');
+        }
+        return new JsonResponse(['token' => $token->getToken()], 200, true);
+    }
+
+    /**
      * @param ApiToken|ApiToken[] $tokens
      * @return string
      */
