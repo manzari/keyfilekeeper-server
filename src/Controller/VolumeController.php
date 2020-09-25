@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Entity\Volume;
 use App\Repository\VolumeRepository;
 use App\Responses\EmptyResponse;
@@ -9,7 +10,6 @@ use App\Responses\NotFoundOrNoRightsResponse;
 use App\Responses\RedirectResponse;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
-use stdClass;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -154,13 +154,13 @@ class VolumeController
     public function getSecret(Request $request, int $id)
     {
         $volume = $this->volumeRepository->findOneBy(['id' => $id]);
-        if (
-            ($volume !== null && $volume->getUser()->getUsername() === $this->security->getUser()->getUsername())
-            || in_array('ROLE_ADMIN', $this->security->getUser()->getRoles())) {
+        /** @var User $currentUser */
+        $currentUser = $this->security->getUser();
+        if (($volume !== null && $volume->getUser()->getId() === $currentUser->getId()) || $currentUser->hasRole('ROLE_ADMIN')) {
             $this->volumeRepository->delete($volume);
             return new Response($volume->getSecret(), Response::HTTP_OK, ['content-type' => 'text/plain']);
         }
-        return new NotFoundOrNoRightsResponse('volume');
+        return new NotFoundOrNoRightsResponse('secret');
     }
 
     /**
