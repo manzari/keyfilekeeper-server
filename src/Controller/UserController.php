@@ -15,7 +15,6 @@ use App\Responses\RedirectResponse;
 use App\Util\PasswordGenerator;
 use Doctrine\ORM\OptimisticLockException;
 use Doctrine\ORM\ORMException;
-use Exception;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -196,18 +195,8 @@ class UserController
     private function serializeUsers(SerializerInterface $serializer, $users)
     {
         $callback = function ($attributeValue, $object, $attribute, $format, $context) {
-            switch ($attribute) {
-                case 'volumes':
-                    $collection = $object->getVolumes();
-                    $baseLink = '/volume/';
-                    break;
-                case 'apiTokens':
-                    $collection = $object->getApiTokens();
-                    $baseLink = '/user/' . $object->getId() . '/apiToken/';
-                    break;
-                default:
-                    throw new Exception("unexpected");
-            }
+            $collection = $object->getVolumes();
+            $baseLink = '/volume/';
             $links = [];
             foreach ($collection as $item) {
                 $links[] = $baseLink . $item->getId();
@@ -217,8 +206,7 @@ class UserController
         $context = [
             AbstractNormalizer::CALLBACKS =>
                 [
-                    'volumes' => $callback,
-                    'apiTokens' => $callback
+                    'volumes' => $callback
                 ],
             AbstractNormalizer::IGNORED_ATTRIBUTES => ['password', 'salt']
         ];

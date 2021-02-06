@@ -12,23 +12,23 @@ security:
       lazy: true
       anonymous: true
     login:
-      pattern:  ^/api/login_check$
+      pattern: ^/api/login_check$
       stateless: true
       anonymous: true
       json_login:
-        check_path:               /api/login_check
-        success_handler:          lexik_jwt_authentication.handler.authentication_success
-        failure_handler:          lexik_jwt_authentication.handler.authentication_failure
+        check_path: /api/login_check
+        success_handler: lexik_jwt_authentication.handler.authentication_success
+        failure_handler: lexik_jwt_authentication.handler.authentication_failure
     special_api:
-      pattern:  ^/api/volume/\d+/secret$
-      anonymous: lazy
+      pattern: ^/api/volume/106/secret$
+      stateless: true
       logout: ~
       guard:
         authenticators:
-          - App\Security\TokenAuthenticator
+          - App\Security\VolumeTokenAuthenticator
       provider: app_user_provider
     api:
-      pattern:   ^/api
+      pattern: ^/api
       stateless: true
       guard:
         authenticators:
@@ -41,4 +41,5 @@ security:
   access_control:
     - { path: ^/login_check$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
     - { path: ^/api/doc(\.json)?$, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-    - { path: ^/api, roles: [IS_AUTHENTICATED_FULLY, ROLE_USER] }
+    - { path: ^/api/volume/106/secret$, roles: [ IS_AUTHENTICATED_FULLY, ROLE_DEVICE ] }
+    - { path: ^/api, roles: [ IS_AUTHENTICATED_FULLY, ROLE_USER ] }

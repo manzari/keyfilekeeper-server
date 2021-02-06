@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\TokenUser;
 use App\Entity\User;
 use App\Entity\Volume;
 use App\Repository\VolumeRepository;
@@ -52,7 +53,7 @@ class VolumeController
      * @param SerializerInterface $serializer
      * @return Response
      */
-    public function getVolumes(Request $request, SerializerInterface $serializer)
+    public function getVolumes(Request $request, SerializerInterface $serializer): Response
     {
         if (in_array('ROLE_ADMIN', $this->security->getUser()->getRoles())) {
             $volumesCollection = $this->volumeRepository->findAll();
@@ -147,18 +148,20 @@ class VolumeController
     /**
      * @Route("/api/volume/{id}/secret", methods={"GET"})
      * @param Request $request
-     * @param $id
+     * @param int $id
      * @return Response
-     * @throws ORMException
      */
     public function getSecret(Request $request, int $id)
     {
         $volume = $this->volumeRepository->findOneBy(['id' => $id]);
         /** @var User $currentUser */
         $currentUser = $this->security->getUser();
-        if (($volume !== null && $volume->getUser()->getId() === $currentUser->getId()) || $currentUser->hasRole('ROLE_ADMIN')) {
-            $this->volumeRepository->delete($volume);
-            return new Response($volume->getSecret(), Response::HTTP_OK, ['content-type' => 'text/plain']);
+        if ($volume !== null && $currentUser instanceof TokenUser && $currentUser->hasRole('ROLE_DEVICE')) {
+            foreach ($volume->getVolumeTokens() as $volumeToken) {
+                if ($volumeToken->getId() === $currentUser->getVolumeTokenId() && $volumeToken->isValid()) {
+                    return new Response($volume->getSecret(), Response::HTTP_OK, ['content-type' => 'text/plain']);
+                }
+            }
         }
         return new NotFoundOrNoRightsResponse('secret');
     }
@@ -171,10 +174,18 @@ class VolumeController
     private function serializeVolumes(SerializerInterface $serializer, $volumes)
     {
         $userCallback = function ($attributeValue, $object, $attribute, $format, $context) {
-            return '/user/' . $object->getUser()->getId();
+            return $attributeValue->getUsername();
+        };
+        $volumeTokenCallback = function ($attributeValue, $object, $attribute, $format, $context) {
+            $ids = [];
+            $collection = $object->getVolumeTokens();
+            foreach ($collection as $volumeToken) {
+                $ids[] = $volumeToken->getId();
+            }
+            return $ids;
         };
         $context = [
-            AbstractNormalizer::CALLBACKS => ['user' => $userCallback],
+            AbstractNormalizer::CALLBACKS => ['user' => $userCallback, 'volumeTokens' => $volumeTokenCallback],
             AbstractNormalizer::IGNORED_ATTRIBUTES => ['secret']
         ];
         return $serializer->serialize($volumes, 'json', $context);

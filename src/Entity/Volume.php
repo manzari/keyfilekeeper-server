@@ -7,7 +7,6 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
-use Symfony\Component\Serializer\Annotation\MaxDepth;
 
 /**
  * @ORM\Entity(repositoryClass=VolumeRepository::class)
@@ -37,10 +36,16 @@ class Volume
      */
     private $user;
 
+    /**
+     * @ORM\OneToMany(targetEntity=VolumeToken::class, mappedBy="volume", orphanRemoval=true)
+     */
+    private $volumeTokens;
+
     public function __construct(string $name, string $secret)
     {
         $this->name = $name;
         $this->secret = $secret;
+        $this->volumeTokens = new ArrayCollection();
     }
 
 
@@ -85,6 +90,37 @@ class Volume
     public function setUser(?UserInterface $user): self
     {
         $this->user = $user;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|VolumeToken[]
+     */
+    public function getVolumeTokens(): Collection
+    {
+        return $this->volumeTokens;
+    }
+
+    public function addVolumeToken(VolumeToken $volumeToken): self
+    {
+        if (!$this->volumeTokens->contains($volumeToken)) {
+            $this->volumeTokens[] = $volumeToken;
+            $volumeToken->setVolume($this);
+        }
+
+        return $this;
+    }
+
+    public function removeVolumeToken(VolumeToken $volumeToken): self
+    {
+        if ($this->volumeTokens->contains($volumeToken)) {
+            $this->volumeTokens->removeElement($volumeToken);
+            // set the owning side to null (unless already changed)
+            if ($volumeToken->getVolume() === $this) {
+                $volumeToken->setVolume(null);
+            }
+        }
 
         return $this;
     }

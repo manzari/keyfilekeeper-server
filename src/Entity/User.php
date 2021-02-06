@@ -42,11 +42,6 @@ class User implements UserInterface
     private $volumes;
 
     /**
-     * @ORM\OneToMany(targetEntity=ApiToken::class, mappedBy="user", orphanRemoval=true)
-     */
-    private $apiTokens;
-
-    /**
      * User constructor.
      * @param string $username
      */
@@ -54,7 +49,6 @@ class User implements UserInterface
     {
         $this->username = $username;
         $this->volumes = new ArrayCollection();
-        $this->apiTokens = new ArrayCollection();
     }
 
     /**
@@ -202,37 +196,6 @@ class User implements UserInterface
             // set the owning side to null (unless already changed)
             if ($volume->getUser() === $this) {
                 $volume->setUser(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection|ApiToken[]
-     */
-    public function getApiTokens(): Collection
-    {
-        return $this->apiTokens;
-    }
-
-    public function addApiToken(ApiToken $apiToken): self
-    {
-        if (!$this->apiTokens->contains($apiToken)) {
-            $this->apiTokens[] = $apiToken;
-            $apiToken->setUser($this);
-        }
-
-        return $this;
-    }
-
-    public function removeApiToken(ApiToken $apiToken): self
-    {
-        if ($this->apiTokens->contains($apiToken)) {
-            $this->apiTokens->removeElement($apiToken);
-            // set the owning side to null (unless already changed)
-            if ($apiToken->getUser() === $this) {
-                $apiToken->setUser(null);
             }
         }
 
